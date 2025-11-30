@@ -10,6 +10,7 @@ struct CliArgs {
     std::string key_hex;  // CLI-3: hex, 16 bytes
     std::string input_file;
     std::string output_file;  // CLI-5: default
+    std::string iv_hex;
 };
 
 CliArgs parse_args(int argc, char* argv[]);  // CLI-4: validate

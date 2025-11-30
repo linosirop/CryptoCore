@@ -134,14 +134,28 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CryptoCore.cpp" />
+    <ClCompile Include="src\aes_primitive.cpp" />
     <ClCompile Include="src\cli_parser.cpp" />
+    <ClCompile Include="src\csprng.cpp" />
     <ClCompile Include="src\file_io.cpp" />
+    <ClCompile Include="src\modes\cbc.cpp" />
+    <ClCompile Include="src\modes\cfb.cpp" />
+    <ClCompile Include="src\modes\ctr.cpp" />
     <ClCompile Include="src\modes\ecb.cpp" />
+    <ClCompile Include="src\modes\ofb.cpp" />
+    <ClCompile Include="src\padding.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\aes_primitive.h" />
     <ClInclude Include="include\cli_parser.h" />
+    <ClInclude Include="include\csprng.h" />
     <ClInclude Include="include\file_io.h" />
+    <ClInclude Include="include\modes\cbc.h" />
+    <ClInclude Include="include\modes\cfb.h" />
+    <ClInclude Include="include\modes\ctr.h" />
     <ClInclude Include="include\modes\ecb.h" />
+    <ClInclude Include="include\modes\ofb.h" />
+    <ClInclude Include="include\padding.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
