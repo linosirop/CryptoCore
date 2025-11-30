@@ -69,10 +69,10 @@ CliArgs parse_args(int argc, char* argv[]) {
     if (flags.count("mode")) {
         args.mode = flags["mode"];
     }
-    if (args.mode != "ecb") {
-        std::cerr << "[ERROR] Only 'ecb' mode supported" << std::endl;
-        std::exit(1);
-    }
+    if (args.mode != "ecb" && args.mode != "cbc" && args.mode != "cfb" && args.mode != "ofb"         && args.mode != "ctr") {
+    std::cerr << "[ERROR] Mode: ecb/cbc/cfb/ofb/ctr" << std::endl;
+    std::exit(1);
+}
 
     // Валидация encrypt/decrypt (CLI-2, CLI-4)
     args.encrypt = flags.count("encrypt");
@@ -117,6 +117,27 @@ CliArgs parse_args(int argc, char* argv[]) {
     else {
         // Генерация имени файла по умолчанию
         args.output_file = args.input_file + (args.encrypt ? ".enc" : ".dec");
+    }
+    
+
+
+         if (flags.count("iv")) {
+        args.iv_hex = flags["iv"];
+        if (args.encrypt) {
+            std::cerr << "[WARN] --iv ignored for encryption (generate random)" << std::endl;
+            args.iv_hex.clear();
+        } else {
+            if (args.iv_hex.length() != 32) { 
+                std::cerr << "[ERROR] --iv 32 hex" << std::endl; 
+                std::exit(1); 
+            }
+            for (char c : args.iv_hex) {
+                if (!std::isxdigit(static_cast<unsigned char>(c))) { 
+                    std::cerr << "[ERROR] Hex IV" << std::endl; 
+                    std::exit(1); 
+                }
+            }
+        }
     }
 
     return args;

@@ -1,0 +1,2 @@
+This is exactly 47 byte test message for CryptoCore
++15 more bytes here

@@ -13,7 +13,14 @@ add_executable(cryptocore
     CryptoCore.cpp
     src/cli_parser.cpp
     src/file_io.cpp
+    src/csprng.cpp
+    src/padding.cpp  
+    src/aes_primitive.cpp         
     src/modes/ecb.cpp
+    src/modes/cbc.cpp
+    src/modes/cfb.cpp
+    src/modes/ofb.cpp
+    src/modes/ctr.cpp
 )
 
 target_link_libraries(cryptocore OpenSSL::Crypto)
