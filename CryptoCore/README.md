@@ -1,142 +1,122 @@
 \# CryptoCore
 
+
+
 CLI-инструмент для криптографических операций (Sprint 1: AES-128 ECB).
 
 
 
-Реализованные возможности
+\## Реализованные возможности
 
-Алгоритм: AES-128 (128-битный ключ, 128-битные блоки)
 
 
+\- \*\*Алгоритм\*\*: AES-128 (128-битный ключ, 128-битные блоки)
 
-Режим: ECB (Electronic Codebook)
+\- \*\*Режим\*\*: ECB (Electronic Codebook)
 
+\- \*\*Дополнение\*\*: PKCS#7
 
+\- \*\*Формат ключа\*\*: 32-символьная hex-строка (16 байт)
 
-Дополнение: PKCS#7
 
 
+\## Выполненные требования Sprint 1
 
-Формат ключа: 32-символьная hex-строка (16 байт)
 
 
+\### Project Structure \& Repository Hygiene (STR)
 
-Выполненные требования Sprint 1
+\- STR-1: Git репозиторий
 
-Project Structure \& Repository Hygiene (STR)
+\- STR-2: README с инструкциями
 
-STR-1: Git репозиторий
+\- STR-3: Система сборки (Visual Studio проект и CMake)
 
+\- STR-4: Логическая структура папок
 
 
-STR-2: README с инструкциями
 
+\### Command-Line Interface (CLI)
 
+\- CLI-1: Запускается как `cryptocore`
 
-STR-3: Система сборки (CMake/Visual Studio)
+\- CLI-2: Поддержка всех требуемых аргументов
 
+\- CLI-3: Ключ в hex-формате
 
+\- CLI-4: Валидация аргументов
 
-STR-4: Логическая структура папок
+\- CLI-5: Автогенерация имени выходного файла
 
 
 
-Command-Line Interface (CLI)
+\### Core Cryptographic Implementation (CRY)
 
-CLI-1: Запускается как cryptocore
+\- CRY-1: AES-128
 
+\- CRY-2: Использование OpenSSL
 
+\- CRY-3: Логика ECB режима
 
-CLI-2: Поддержка всех требуемых аргументов
+\- CRY-4: PKCS#7 padding
 
+\- CRY-5: Корректная работа с бинарными файлами
 
 
-CLI-3: Ключ в hex-формате
 
+\### File I/O
 
+\- IO-1: Чтение входных файлов
 
-CLI-4: Валидация аргументов
+\- IO-2: Запись выходных файлов
 
+\- IO-3: Обработка ошибок файловой системы
 
 
-CLI-5: Автогенерация имени выходного файла
 
+\### Testing \& Verification
 
+\- TEST-1: Round-trip тестирование (шифрование + дешифрование)
 
-Core Cryptographic Implementation (CRY)
+\- TEST-2: Автоматический тестовый скрипт
 
-CRY-1: AES-128
+\- TEST-3: Сравнение с оригинальным файлом
 
 
 
-CRY-2: Использование OpenSSL
+\## Зависимости
 
 
 
-CRY-3: Логика ECB режима
+\- \*\*Язык\*\*: C++17
 
+\- \*\*Компилятор\*\*: Visual Studio 2022+ или совместимый
 
+\- \*\*Библиотеки\*\*: OpenSSL 3.x
 
-CRY-4: PKCS#7 padding
+\- \*\*Система сборки\*\*: CMake 3.20+ или Visual Studio Project
 
 
 
-CRY-5: Корректная работа с бинарными файлами
+\## Инструкции по сборке
 
 
 
-File I/O
+\### Способ 1: Visual Studio
 
-IO-1: Чтение входных файлов
+1\. Откройте `CryptoCore.sln` в Visual Studio 2022+
 
+2\. Сборка -> Собрать решение (Ctrl+Shift+B)
 
+3\. Исполняемый файл будет создан в `x64/Debug/` или `x64/Release/`
 
-IO-2: Запись выходных файлов
 
 
+\### Способ 2: CMake
 
-IO-3: Обработка ошибок файловой системы
+```bash
 
-
-
-Зависимости
-
-Язык: C++17
-
-
-
-Компилятор: Visual Studio 2022+
-
-
-
-Библиотеки: OpenSSL 3.x
-
-
-
-Система сборки: CMake 3.20+ или Visual Studio Project
-
-
-
-Инструкции по сборке
-
-Способ 1: Visual Studio
-
-Откройте CryptoCore.sln в Visual Studio 2022+
-
-
-
-Сборка → Собрать решение (Ctrl+Shift+B)
-
-
-
-Исполняемый файл будет создан в x64/Debug/ или x64/Release/
-
-
-
-Способ 2: CMake
-
-bash
+cd CryptoCore
 
 mkdir build
 
@@ -145,52 +125,6 @@ cd build
 cmake ..
 
 cmake --build . --config Release
-
-Настройка OpenSSL
-
-Проект использует vcpkg для управления зависимостями.
-
-
-
-Использование
-
-Синтаксис:
-
-bash
-
-\# Формат с пробелом
-
-cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c0d0e0f --input plaintext.txt --output ciphertext.bin
-
-
-
-\# Формат с =
-
-cryptocore --algorithm=aes --mode=ecb --decrypt --key=000102030405060708090a0b0c0d0e0f --input=ciphertext.bin --output=decrypted.txt
-
-Аргументы:
-
---algorithm ALGORITHM - алгоритм шифрования (только aes)
-
-
-
---mode MODE - режим работы (только ecb)
-
-
-
---encrypt или --decrypt - операция (обязательно один)
-
-
-
---key KEY - ключ (32 hex-символа, 16 байт)
-
-
-
---input FILE - входной файл (обязательно)
-
-
-
---output FILE - выходной файл (опционально)
 
 
 
@@ -208,13 +142,23 @@ cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c
 
 cryptocore --algorithm aes --mode ecb --decrypt --key 000102030405060708090a0b0c0d0e0f --input document.enc --output document\_decrypted.txt
 
+
+
+\# Автогенерация имени файла
+
+cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c0d0e0f --input data.bin
+
+\# Создаст data.bin.enc
+
+
+
 Тестирование
 
-Round-trip тест:
+Ручное тестирование:
 
 bash
 
-echo "Test message" > test.txt
+echo "Hello CryptoCore!" > test.txt
 
 cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c0d0e0f --input test.txt --output encrypted.bin
 
@@ -222,25 +166,33 @@ cryptocore --algorithm aes --mode ecb --decrypt --key 000102030405060708090a0b0c
 
 fc test.txt decrypted.txt
 
+\# Должен показать, что файлы идентичны
+
+Автоматический тест:
+
+Запустите tests/final\_test.bat для автоматического round-trip тестирования.
+
+
+
 Структура проекта
 
 text
 
 CryptoCore/
 
-├── src/
+├── src/                 # Исходный код
 
-│   ├── main.cpp
+│   ├── main.cpp        # Точка входа
 
-│   ├── cli\_parser.cpp
+│   ├── cli\_parser.cpp  # Парсер аргументов
 
-│   ├── file\_io.cpp
+│   ├── file\_io.cpp     # Работа с файлами
 
 │   └── modes/
 
-│       └── ecb.cpp
+│       └── ecb.cpp     # Реализация ECB
 
-├── include/
+├── include/            # Заголовочные файлы
 
 │   ├── cli\_parser.h
 
@@ -250,9 +202,43 @@ CryptoCore/
 
 │       └── ecb.h
 
-├── tests/
+├── tests/              # Тесты
 
-├── CMakeLists.txt
+│   ├── test\_s1.bat    # Автоматический тест
 
-└── README.md
+│   └── final\_test.bat # Гарантированный тест
+
+├── CMakeLists.txt      # Конфигурация CMake
+
+├── CryptoCore.vcxproj  # Visual Studio проект
+
+└── README.md          # Документация
+
+Проверка работоспособности
+
+Проект был протестирован на:
+
+
+
+Сборка через Visual Studio 2022
+
+
+
+Сборка через CMake
+
+
+
+Round-trip тестирование (шифрование + дешифрование)
+
+
+
+Автоматический тестовый скрипт
+
+
+
+Обработка ошибок ввода
+
+
+
+Валидация аргументов командной строки
 
