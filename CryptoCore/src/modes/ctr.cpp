@@ -19,7 +19,7 @@ namespace modes {
             for (size_t j = 0; j < block_size; ++j) {
                 ciphertext.push_back(plaintext[i + j] ^ keystream[j]);
             }
-            // increment counter (big-endian)
+            
             for (int j = 15; j >= 0; --j) {
                 if (++counter[j] != 0) break;
             }
@@ -28,6 +28,6 @@ namespace modes {
     }
 
     std::vector<uint8_t> decrypt_ctr(const std::vector<uint8_t>& key, const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& nonce) {
-        return encrypt_ctr(key, ciphertext, nonce); // CTR: encrypt = decrypt
+        return encrypt_ctr(key, ciphertext, nonce); 
     }
 }

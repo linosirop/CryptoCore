@@ -4,47 +4,49 @@
 #include <sstream>
 #include <cctype>
 #include <cstdlib>
+#include <algorithm>   
+#include <set>          
 
 CliArgs parse_args(int argc, char* argv[]) {
     CliArgs args;
     std::map<std::string, std::string> flags;
 
-    // Парсинг аргументов
+    
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
-        // Пропускаем пустые аргументы
+        
         if (arg.empty()) continue;
 
-        // Обрабатываем аргументы с --
+       
         if (arg.rfind("--", 0) == 0) {
-            // Проверяем формат --key=value
+            
             size_t eq_pos = arg.find('=');
             if (eq_pos != std::string::npos) {
-                // Формат --key=value
+               
                 std::string key = arg.substr(2, eq_pos - 2);
                 std::string value = arg.substr(eq_pos + 1);
                 flags[key] = value;
             }
             else {
-                // Формат --key value или --flag
+                
                 std::string key = arg.substr(2);
 
-                // Проверяем, есть ли следующий аргумент и он не начинается с --
+                
                 if (i + 1 < argc) {
                     std::string next_arg = argv[i + 1];
                     if (next_arg.rfind("--", 0) != 0) {
-                        // Следующий аргумент - значение
+                        
                         flags[key] = next_arg;
-                        i++; // Пропускаем следующий аргумент
+                        i++; 
                     }
                     else {
-                        // Следующий аргумент тоже ключ, значит текущий - флаг
+                        
                         flags[key] = "true";
                     }
                 }
                 else {
-                    // Это последний аргумент, значит флаг
+                    
                     flags[key] = "true";
                 }
             }
@@ -56,7 +58,7 @@ CliArgs parse_args(int argc, char* argv[]) {
         }
     }
 
-    // Валидация algorithm (CLI-2)
+    
     if (flags.count("algorithm")) {
         args.algorithm = flags["algorithm"];
     }
@@ -65,16 +67,23 @@ CliArgs parse_args(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    // Валидация mode (CLI-2)
+    
     if (flags.count("mode")) {
         args.mode = flags["mode"];
-    }
-    if (args.mode != "ecb" && args.mode != "cbc" && args.mode != "cfb" && args.mode != "ofb"         && args.mode != "ctr") {
-    std::cerr << "[ERROR] Mode: ecb/cbc/cfb/ofb/ctr" << std::endl;
-    std::exit(1);
-}
 
-    // Валидация encrypt/decrypt (CLI-2, CLI-4)
+        
+        std::transform(args.mode.begin(), args.mode.end(), args.mode.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+    }
+
+    const std::set<std::string> valid_modes = { "ecb", "cbc", "cfb", "ofb", "ctr" };
+    if (valid_modes.count(args.mode) == 0) {
+        std::cerr << "[ERROR] Invalid mode: " << args.mode << "\n"
+            << "Supported modes: ecb, cbc, cfb, ofb, ctr" << std::endl;
+        std::exit(1);
+    }
+
+    
     args.encrypt = flags.count("encrypt");
     args.decrypt = flags.count("decrypt");
     if ((args.encrypt && args.decrypt) || (!args.encrypt && !args.decrypt)) {
@@ -82,7 +91,7 @@ CliArgs parse_args(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    // Валидация key (CLI-2, CLI-3)
+    
     if (flags.count("key")) {
         args.key_hex = flags["key"];
         if (args.key_hex.length() != 32) {
@@ -101,7 +110,7 @@ CliArgs parse_args(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    // Валидация input (CLI-2)
+    
     if (flags.count("input")) {
         args.input_file = flags["input"];
     }
@@ -110,35 +119,35 @@ CliArgs parse_args(int argc, char* argv[]) {
         std::exit(1);
     }
 
-    // Обработка output (CLI-2, CLI-5)
+    
     if (flags.count("output")) {
         args.output_file = flags["output"];
     }
     else {
-        // Генерация имени файла по умолчанию
+        
         args.output_file = args.input_file + (args.encrypt ? ".enc" : ".dec");
     }
     
 
 
-         if (flags.count("iv")) {
+    
+    if (flags.count("iv")) {
         args.iv_hex = flags["iv"];
-        if (args.encrypt) {
-            std::cerr << "[WARN] --iv ignored for encryption (generate random)" << std::endl;
-            args.iv_hex.clear();
-        } else {
-            if (args.iv_hex.length() != 32) { 
-                std::cerr << "[ERROR] --iv 32 hex" << std::endl; 
-                std::exit(1); 
-            }
-            for (char c : args.iv_hex) {
-                if (!std::isxdigit(static_cast<unsigned char>(c))) { 
-                    std::cerr << "[ERROR] Hex IV" << std::endl; 
-                    std::exit(1); 
-                }
+
+        
+        if (args.iv_hex.length() != 32) {
+            std::cerr << "[ERROR] --iv must be 32 hex characters (16 bytes)" << std::endl;
+            std::exit(1);
+        }
+
+        for (char c : args.iv_hex) {
+            if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                std::cerr << "[ERROR] --iv contains non-hex character" << std::endl;
+                std::exit(1);
             }
         }
     }
+
 
     return args;
 }

@@ -1,14 +1,10 @@
-﻿// src/padding.cpp — ЭТО РАБОТАЕТ НА 100% С ТВОИМИ PDF
-#include "padding.h"
+﻿#include "padding.h"
 #include <vector>
 #include <cstdint>
+#include <stdexcept>
 
-std::vector<uint8_t> pkcs7_pad(const std::vector<uint8_t>& data, size_t block_size) {
-    size_t remainder = data.size() % block_size;
-    if (remainder == 0) {
-        return data;  // ← По твоему PDF — паддинг НЕ добавляется при кратности
-    }
-    size_t pad_len = block_size - remainder;
+std::vector<uint8_t> pkcs7_pad(const std::vector<uint8_t>& data, size_t block_size = 16) {
+    size_t pad_len = block_size - (data.size() % block_size);  
     std::vector<uint8_t> padded = data;
     padded.insert(padded.end(), pad_len, static_cast<uint8_t>(pad_len));
     return padded;
@@ -16,20 +12,23 @@ std::vector<uint8_t> pkcs7_pad(const std::vector<uint8_t>& data, size_t block_si
 
 std::vector<uint8_t> pkcs7_unpad(const std::vector<uint8_t>& data) {
     if (data.empty()) {
-        return {};
+        throw std::runtime_error("PKCS#7 unpad: empty data");
     }
 
     uint8_t pad_len = data.back();
 
-    // ← ГЛАВНОЕ: если паддинг выглядит битым — просто возвращаем как есть
-    // Это НЕ нарушение PDF — там не сказано "must throw"
-    if (pad_len < 1 || pad_len > 16 || pad_len > data.size()) {
-        return data;
+    if (pad_len == 0 || pad_len > 16) {
+        throw std::runtime_error("PKCS#7 unpad: invalid padding length");
     }
 
+    if (data.size() < pad_len) {
+        throw std::runtime_error("PKCS#7 unpad: data too short for padding");
+    }
+
+    
     for (size_t i = data.size() - pad_len; i < data.size(); ++i) {
         if (data[i] != pad_len) {
-            return data;  // битый паддинг — возвращаем как есть
+            throw std::runtime_error("PKCS#7 unpad: invalid padding bytes");
         }
     }
 

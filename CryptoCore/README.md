@@ -1,244 +1,93 @@
-\# CryptoCore
+README
+1. Назначение проекта
 
+Программа реализует шифрование и расшифрование данных с использованием алгоритма AES-128 в режимах ECB, CBC, CFB, OFB и CTR. Реализация совместима с OpenSSL и поддерживает файловый ввод/вывод в бинарном формате.
 
+2. Возможности
 
-CLI-инструмент для криптографических операций (Sprint 1: AES-128 ECB).
+AES-128 шифрование/дешифрование.
 
+Поддерживаемые режимы:
+ecb, cbc, cfb, ofb, ctr.
 
+PKCS#7 выравнивание для блочных режимов.
 
-\## Реализованные возможности
+Автоматическая генерация IV (кроме ECB).
 
+Чтение и запись IV в файл (префикс перед данными).
 
+Работа с файлами произвольного размера.
 
-\- \*\*Алгоритм\*\*: AES-128 (128-битный ключ, 128-битные блоки)
+3. Зависимости
 
-\- \*\*Режим\*\*: ECB (Electronic Codebook)
+OpenSSL (версия 3.x или совместимая).
 
-\- \*\*Дополнение\*\*: PKCS#7
+C++17.
 
-\- \*\*Формат ключа\*\*: 32-символьная hex-строка (16 байт)
+Windows (MinGW/MSVC) или Linux.
 
+4. Формат использования
+cryptocore --algorithm aes --mode <mode> (--encrypt | --decrypt)
+            --key <hex>
+            --input <файл>
+            --output <файл>
+            [--iv <hex>]
 
+Параметры
+Параметр	Описание
+--algorithm aes	Алгоритм шифрования (обязательный).
+--mode	Режим AES: ecb/cbc/cfb/ofb/ctr.
+--encrypt	Шифрование.
+--decrypt	Дешифрование.
+--key	Ключ AES-128 (32 hex-символа).
+--iv	Необязательный IV (для режимов кроме ECB).
+--input	Входной файл.
+--output	Выходной файл.
+Пример шифрования (ECB)
+cryptocore --algorithm aes --mode ecb --encrypt --key 00112233445566778899aabbccddeeff --input plain.txt --output enc.bin
 
-\## Выполненные требования Sprint 1
+Пример дешифрования (CBC)
+cryptocore --algorithm aes --mode ecb --decrypt --key 00112233445566778899aabbccddeeff --input enc.bin --output dec.txt
 
+5. Формат файлов
+ECB
 
+данные → ciphertext
+(без IV)
 
-\### Project Structure \& Repository Hygiene (STR)
+CBC/CFB/OFB/CTR
 
-\- STR-1: Git репозиторий
+При шифровании (если IV не задан вручную):
 
-\- STR-2: README с инструкциями
+[16-байтовый IV] + [ciphertext]
 
-\- STR-3: Система сборки (Visual Studio проект и CMake)
 
-\- STR-4: Логическая структура папок
+При дешифровании:
 
+если IV не указан — считывается автоматически из файла
 
+если указан — файл интерпретируется как «чистый cipher-текст»
 
-\### Command-Line Interface (CLI)
+6. Реализация
 
-\- CLI-1: Запускается как `cryptocore`
+Блочные режимы основаны на AES_encrypt / AES_decrypt (OpenSSL).
 
-\- CLI-2: Поддержка всех требуемых аргументов
+Для CBC, CFB, OFB и CTR реализована пошаговая обработка блоков.
 
-\- CLI-3: Ключ в hex-формате
+PKCS#7 корректно применяется только в блочных режимах (ECB/CBC).
 
-\- CLI-4: Валидация аргументов
+В потоковых режимах (CFB/OFB/CTR) padding не используется.
 
-\- CLI-5: Автогенерация имени выходного файла
+7. Тестирование
 
+Проверка выполнена через:
 
+сравнение с openssl enc для всех режимов;
 
-\### Core Cryptographic Implementation (CRY)
+тесты на малых и больших файлах, включая 1 MB;
 
-\- CRY-1: AES-128
+контроль совпадения ciphertext и plaintext после обратного преобразования.
 
-\- CRY-2: Использование OpenSSL
+Все тесты прошли успешно.
 
-\- CRY-3: Логика ECB режима
-
-\- CRY-4: PKCS#7 padding
-
-\- CRY-5: Корректная работа с бинарными файлами
-
-
-
-\### File I/O
-
-\- IO-1: Чтение входных файлов
-
-\- IO-2: Запись выходных файлов
-
-\- IO-3: Обработка ошибок файловой системы
-
-
-
-\### Testing \& Verification
-
-\- TEST-1: Round-trip тестирование (шифрование + дешифрование)
-
-\- TEST-2: Автоматический тестовый скрипт
-
-\- TEST-3: Сравнение с оригинальным файлом
-
-
-
-\## Зависимости
-
-
-
-\- \*\*Язык\*\*: C++17
-
-\- \*\*Компилятор\*\*: Visual Studio 2022+ или совместимый
-
-\- \*\*Библиотеки\*\*: OpenSSL 3.x
-
-\- \*\*Система сборки\*\*: CMake 3.20+ или Visual Studio Project
-
-
-
-\## Инструкции по сборке
-
-
-
-\### Способ 1: Visual Studio
-
-1\. Откройте `CryptoCore.sln` в Visual Studio 2022+
-
-2\. Сборка -> Собрать решение (Ctrl+Shift+B)
-
-3\. Исполняемый файл будет создан в `x64/Debug/` или `x64/Release/`
-
-
-
-\### Способ 2: CMake
-
-```bash
-
-cd CryptoCore
-
-mkdir build
-
-cd build
-
-cmake ..
-
-cmake --build . --config Release
-
-
-
-Примеры:
-
-bash
-
-\# Шифрование
-
-cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c0d0e0f --input document.txt --output document.enc
-
-
-
-\# Дешифрование
-
-cryptocore --algorithm aes --mode ecb --decrypt --key 000102030405060708090a0b0c0d0e0f --input document.enc --output document\_decrypted.txt
-
-
-
-\# Автогенерация имени файла
-
-cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c0d0e0f --input data.bin
-
-\# Создаст data.bin.enc
-
-
-
-Тестирование
-
-Ручное тестирование:
-
-bash
-
-echo "Hello CryptoCore!" > test.txt
-
-cryptocore --algorithm aes --mode ecb --encrypt --key 000102030405060708090a0b0c0d0e0f --input test.txt --output encrypted.bin
-
-cryptocore --algorithm aes --mode ecb --decrypt --key 000102030405060708090a0b0c0d0e0f --input encrypted.bin --output decrypted.txt
-
-fc test.txt decrypted.txt
-
-\# Должен показать, что файлы идентичны
-
-Автоматический тест:
-
-Запустите tests/final\_test.bat для автоматического round-trip тестирования.
-
-
-
-Структура проекта
-
-text
-
-CryptoCore/
-
-├── src/                 # Исходный код
-
-│   ├── main.cpp        # Точка входа
-
-│   ├── cli\_parser.cpp  # Парсер аргументов
-
-│   ├── file\_io.cpp     # Работа с файлами
-
-│   └── modes/
-
-│       └── ecb.cpp     # Реализация ECB
-
-├── include/            # Заголовочные файлы
-
-│   ├── cli\_parser.h
-
-│   ├── file\_io.h
-
-│   └── modes/
-
-│       └── ecb.h
-
-├── tests/              # Тесты
-
-│   ├── test\_s1.bat    # Автоматический тест
-
-│   └── final\_test.bat # Гарантированный тест
-
-├── CMakeLists.txt      # Конфигурация CMake
-
-├── CryptoCore.vcxproj  # Visual Studio проект
-
-└── README.md          # Документация
-
-Проверка работоспособности
-
-Проект был протестирован на:
-
-
-
-Сборка через Visual Studio 2022
-
-
-
-Сборка через CMake
-
-
-
-Round-trip тестирование (шифрование + дешифрование)
-
-
-
-Автоматический тестовый скрипт
-
-
-
-Обработка ошибок ввода
-
-
-
-Валидация аргументов командной строки
-
+Для автотеста запустите test_all_modes(SPRINT 2).bat в папке tests

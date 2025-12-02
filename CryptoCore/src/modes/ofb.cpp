@@ -22,6 +22,6 @@ namespace modes {
     }
 
     std::vector<uint8_t> decrypt_ofb(const std::vector<uint8_t>& key, const std::vector<uint8_t>& ciphertext, const std::vector<uint8_t>& iv) {
-        return encrypt_ofb(key, ciphertext, iv); // OFB: encrypt = decrypt
+        return encrypt_ofb(key, ciphertext, iv); 
     }
 }
