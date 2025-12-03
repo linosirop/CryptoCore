@@ -11,6 +11,7 @@ struct CliArgs {
     std::string input_file;
     std::string output_file;  
     std::string iv_hex;
+    size_t dump_random = 0;
 };
 
 CliArgs parse_args(int argc, char* argv[]);  

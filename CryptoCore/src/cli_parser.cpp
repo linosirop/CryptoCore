@@ -106,8 +106,10 @@ CliArgs parse_args(int argc, char* argv[]) {
         }
     }
     else {
-        std::cerr << "[ERROR] --key is required" << std::endl;
-        std::exit(1);
+        if (args.decrypt) {
+            std::cerr << "[ERROR] --key is required for decryption" << std::endl;
+            std::exit(1);
+        }
     }
 
     
@@ -133,19 +135,23 @@ CliArgs parse_args(int argc, char* argv[]) {
     
     if (flags.count("iv")) {
         args.iv_hex = flags["iv"];
-
-        
+        // ѕри любом режиме сохран€ем IV; валидаци€ ниже
         if (args.iv_hex.length() != 32) {
             std::cerr << "[ERROR] --iv must be 32 hex characters (16 bytes)" << std::endl;
             std::exit(1);
         }
-
         for (char c : args.iv_hex) {
             if (!std::isxdigit(static_cast<unsigned char>(c))) {
-                std::cerr << "[ERROR] --iv contains non-hex character" << std::endl;
+                std::cerr << "[ERROR] --iv must contain only hexadecimal characters" << std::endl;
                 std::exit(1);
             }
         }
+    }
+
+
+    if (flags.count("dump-random")) {
+        // parse integer
+        args.dump_random = std::stoul(flags["dump-random"]);
     }
 
 
