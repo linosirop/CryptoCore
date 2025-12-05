@@ -1,17 +1,19 @@
-
 #pragma once
 #include <string>
 
 struct CliArgs {
-    std::string algorithm = "aes";  
-    std::string mode = "ecb";
+    std::string command;      
+    std::string algorithm;
+    std::string mode;
+    std::string key_hex;
+    std::string iv_hex;
+    std::string input_file;
+    std::string output_file;
+
     bool encrypt = false;
     bool decrypt = false;
-    std::string key_hex;  
-    std::string input_file;
-    std::string output_file;  
-    std::string iv_hex;
+
     size_t dump_random = 0;
 };
 
-CliArgs parse_args(int argc, char* argv[]);  
+CliArgs parse_args(int argc, char* argv[]);

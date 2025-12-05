@@ -138,6 +138,8 @@
     <ClCompile Include="src\cli_parser.cpp" />
     <ClCompile Include="src\csprng.cpp" />
     <ClCompile Include="src\file_io.cpp" />
+    <ClCompile Include="src\hash\sha256_stream.cpp" />
+    <ClCompile Include="src\hash\sha3_stream.cpp" />
     <ClCompile Include="src\modes\cbc.cpp" />
     <ClCompile Include="src\modes\cfb.cpp" />
     <ClCompile Include="src\modes\ctr.cpp" />
@@ -156,6 +158,8 @@
     <ClInclude Include="include\modes\ecb.h" />
     <ClInclude Include="include\modes\ofb.h" />
     <ClInclude Include="include\padding.h" />
+    <ClInclude Include="src\hash\sha256_stream.h" />
+    <ClInclude Include="src\hash\sha3_stream.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
