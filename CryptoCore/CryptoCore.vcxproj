@@ -140,6 +140,7 @@
     <ClCompile Include="src\file_io.cpp" />
     <ClCompile Include="src\hash\sha256_stream.cpp" />
     <ClCompile Include="src\hash\sha3_stream.cpp" />
+    <ClCompile Include="src\mac\hmac.cpp" />
     <ClCompile Include="src\modes\cbc.cpp" />
     <ClCompile Include="src\modes\cfb.cpp" />
     <ClCompile Include="src\modes\ctr.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="include\padding.h" />
     <ClInclude Include="src\hash\sha256_stream.h" />
     <ClInclude Include="src\hash\sha3_stream.h" />
+    <ClInclude Include="src\mac\hmac.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

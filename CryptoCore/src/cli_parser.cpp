@@ -63,6 +63,27 @@ CliArgs parse_args(int argc, char* argv[]) {
             std::cerr << "[ERROR] dgst requires --input\n";
             exit(1);
         }
+        // HMAC mode
+        if (flags.count("hmac")) {
+            args.hmac = true;
+
+            if (!flags.count("key")) {
+                std::cerr << "[ERROR] HMAC requires --key\n";
+                exit(1);
+            }
+
+            args.key_hex = flags["key"];
+
+            if (flags.count("verify")) {
+                args.verify_file = flags["verify"];
+            }
+
+            // Ограничим алгоритм
+            if (args.algorithm != "sha256") {
+                std::cerr << "[ERROR] HMAC supported only with sha256\n";
+                exit(1);
+            }
+        }
 
         args.input_file = flags["input"];
         args.output_file = flags.count("output") ? flags["output"] : "hash.bin";

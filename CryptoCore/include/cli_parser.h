@@ -2,6 +2,9 @@
 #include <string>
 
 struct CliArgs {
+    bool hmac = false;
+    std::string verify_file;
+
     std::string command;      
     std::string algorithm;
     std::string mode;

@@ -11,6 +11,7 @@
 
 #include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\hash\sha256_stream.h"
 #include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\hash\sha3_stream.h"
+#include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\mac\hmac.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -64,6 +65,71 @@ int main(int argc, char* argv[]) {
       // DIGEST MODE (SHA-256, SHA3-256)
    
         if (args.command == "dgst") {
+            
+            if (args.hmac) {
+
+                if (args.key_hex.empty()) {
+                    std::cerr << "[ERROR] --key required for HMAC\n";
+                    return 1;
+                }
+
+                auto key = hex_to_bytes(args.key_hex);
+
+                std::ifstream in(args.input_file, std::ios::binary);
+                if (!in) {
+                    std::cerr << "[ERROR] Cannot open input file: " << args.input_file << "\n";
+                    return 1;
+                }
+
+                auto tag = hmac_sha256(key, in);
+
+                // ---- bytes → hex ----
+                std::ostringstream oss;
+                oss << std::hex << std::setfill('0');
+                for (uint8_t b : tag)
+                    oss << std::setw(2) << (unsigned int)b;
+
+                std::string hex = oss.str();
+
+                // ---- VERIFY MODE ----
+                if (!args.verify_file.empty()) {
+
+                    std::ifstream vf(args.verify_file);
+                    if (!vf) {
+                        std::cerr << "[ERROR] Cannot open verify file\n";
+                        return 1;
+                    }
+
+                    std::string expected;
+                    vf >> expected; // читаем только HMAC
+                    vf.close();
+
+                    if (expected == hex) {
+                        std::cout << "[OK] HMAC verification successful\n";
+                        return 0;
+                    }
+                    else {
+                        std::cerr << "[ERROR] HMAC verification failed\n";
+                        return 1;
+                    }
+                }
+
+                // ---- NORMAL OUTPUT ----
+                std::cout << hex << " " << args.input_file << std::endl;
+                std::cout << "[INFO] HMAC completed." << std::endl;
+
+                if (!args.output_file.empty()) {
+                    std::ofstream out(args.output_file, std::ios::binary);
+                    if (!out) {
+                        std::cerr << "[ERROR] Cannot open output file\n";
+                        return 1;
+                    }
+                    out << hex << " " << args.input_file;
+                    out.close();
+                }
+
+                return 0;
+            }
 
             const size_t CHUNK = 64 * 1024; 
 
@@ -77,6 +143,7 @@ int main(int argc, char* argv[]) {
             std::transform(alg.begin(), alg.end(), alg.begin(), ::tolower);
 
             std::vector<uint8_t> digest;
+
 
             
             // SHA-256 STREAMING
