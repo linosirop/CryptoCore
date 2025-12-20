@@ -8,17 +8,19 @@
 #include "modes/cfb.h"
 #include "modes/ofb.h"
 #include "modes/ctr.h"
+#include "modes/gcm.h"
 
-#include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\hash\sha256_stream.h"
-#include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\hash\sha3_stream.h"
-#include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\mac\hmac.h"
+#include "sha256_stream.h"
+#include "sha3_stream.h"
+#include "hmac.h"
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <fstream>
-#include<algorithm>
+#include <algorithm>
+
 static std::vector<uint8_t> hex_to_bytes(const std::string& hex) {
-    
     if (hex.size() % 2 != 0) {
         std::cerr << "[ERROR] Hex string length must be even\n";
         exit(1);
@@ -31,289 +33,226 @@ static std::vector<uint8_t> hex_to_bytes(const std::string& hex) {
         if (c >= '0' && c <= '9') return c - '0';
         if (c >= 'a' && c <= 'f') return c - 'a' + 10;
         if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-        return -1; 
+        return -1;
         };
 
     for (size_t i = 0; i < hex.size(); i += 2) {
         int hi = hex_value(hex[i]);
         int lo = hex_value(hex[i + 1]);
-
         if (hi < 0 || lo < 0) {
-            std::cerr << "[ERROR] Invalid hex character in: " << hex << "\n";
+            std::cerr << "[ERROR] Invalid hex string\n";
             exit(1);
         }
-
-        out.push_back((uint8_t)((hi << 4) | lo));
+        out.push_back(uint8_t((hi << 4) | lo));
     }
-
     return out;
-}
-
-
-static void print_hex(const std::vector<uint8_t>& buf) {
-    std::cout << std::hex << std::setfill('0');
-    for (uint8_t b : buf)
-        std::cout << std::setw(2) << (int)b;
-    std::cout << std::dec << "\n";
 }
 
 int main(int argc, char* argv[]) {
     try {
         CliArgs args = parse_args(argc, argv);
 
-        
-      // DIGEST MODE (SHA-256, SHA3-256)
-   
+        /* ================= DIGEST MODE ================= */
+
         if (args.command == "dgst") {
-            
             if (args.hmac) {
-
-                if (args.key_hex.empty()) {
-                    std::cerr << "[ERROR] --key required for HMAC\n";
-                    return 1;
-                }
-
                 auto key = hex_to_bytes(args.key_hex);
-
                 std::ifstream in(args.input_file, std::ios::binary);
-                if (!in) {
-                    std::cerr << "[ERROR] Cannot open input file: " << args.input_file << "\n";
-                    return 1;
-                }
+                if (!in) return 1;
 
                 auto tag = hmac_sha256(key, in);
 
-                // ---- bytes → hex ----
                 std::ostringstream oss;
                 oss << std::hex << std::setfill('0');
-                for (uint8_t b : tag)
-                    oss << std::setw(2) << (unsigned int)b;
-
+                for (auto b : tag) oss << std::setw(2) << (int)b;
                 std::string hex = oss.str();
 
-                // ---- VERIFY MODE ----
                 if (!args.verify_file.empty()) {
-
                     std::ifstream vf(args.verify_file);
-                    if (!vf) {
-                        std::cerr << "[ERROR] Cannot open verify file\n";
-                        return 1;
-                    }
-
                     std::string expected;
-                    vf >> expected; // читаем только HMAC
-                    vf.close();
-
+                    vf >> expected;
                     if (expected == hex) {
                         std::cout << "[OK] HMAC verification successful\n";
                         return 0;
                     }
-                    else {
-                        std::cerr << "[ERROR] HMAC verification failed\n";
-                        return 1;
-                    }
-                }
-
-                // ---- NORMAL OUTPUT ----
-                std::cout << hex << " " << args.input_file << std::endl;
-                std::cout << "[INFO] HMAC completed." << std::endl;
-
-                if (!args.output_file.empty()) {
-                    std::ofstream out(args.output_file, std::ios::binary);
-                    if (!out) {
-                        std::cerr << "[ERROR] Cannot open output file\n";
-                        return 1;
-                    }
-                    out << hex << " " << args.input_file;
-                    out.close();
-                }
-
-                return 0;
-            }
-
-            const size_t CHUNK = 64 * 1024; 
-
-            std::ifstream in(args.input_file, std::ios::binary);
-            if (!in) {
-                std::cerr << "[ERROR] Unable to open input file: " << args.input_file << std::endl;
-                return 1;
-            }
-
-            std::string alg = args.algorithm;
-            std::transform(alg.begin(), alg.end(), alg.begin(), ::tolower);
-
-            std::vector<uint8_t> digest;
-
-
-            
-            // SHA-256 STREAMING
-            
-            if (alg == "sha256") {
-
-                SHA256_CTX ctx;
-                sha256_init(ctx);
-
-                std::vector<uint8_t> buf(CHUNK);
-
-                while (true) {
-                    in.read(reinterpret_cast<char*>(buf.data()), buf.size());
-                    std::streamsize r = in.gcount();
-                    if (r <= 0) break;
-                    sha256_update(ctx, buf.data(), static_cast<size_t>(r));
-                }
-
-                digest = sha256_final(ctx);
-            }
-
-            
-            // SHA3-256 STREAMING
-           
-            else if (alg == "sha3-256") {
-
-                SHA3_CTX ctx3;
-                sha3_256_init(ctx3);
-
-                std::vector<uint8_t> buf(CHUNK);
-
-                while (true) {
-                    in.read(reinterpret_cast<char*>(buf.data()), buf.size());
-                    std::streamsize r = in.gcount();
-                    if (r <= 0) break;
-                    sha3_256_update(ctx3, buf.data(), static_cast<size_t>(r));
-                }
-
-                digest = sha3_256_final(ctx3);
-            }
-
-            else {
-                std::cerr << "[ERROR] Unsupported algorithm: " << args.algorithm << std::endl;
-                return 1;
-            }
-
-            in.close();
-
-            
-            // Convert digest to lowercase HEX
-            
-            std::ostringstream oss;
-            oss << std::hex << std::setfill('0');
-            for (uint8_t b : digest)
-                oss << std::setw(2) << (unsigned int)(b & 0xFF);
-
-            std::string hex = oss.str();
-
-            
-            
-            
-            std::cout << hex << " " << args.input_file << std::endl;
-            std::cout << "[INFO] Digest completed." << std::endl;
-
-            
-            
-            
-            if (!args.output_file.empty()) {
-                std::ofstream out(args.output_file, std::ios::binary);
-                if (!out) {
-                    std::cerr << "[ERROR] Unable to open output file: " << args.output_file << std::endl;
+                    std::cerr << "[ERROR] HMAC verification failed\n";
                     return 1;
                 }
 
-                out << hex << " " << args.input_file;
-                out.close();
+                std::cout << hex << "\n";
+                return 0;
             }
-
-            return 0;
         }
 
+        /* ================= CIPHER MODE ================= */
 
+        bool needs_iv = (args.mode != "ecb" && args.mode != "gcm" && args.mode != "etm");
 
+        auto key = hex_to_bytes(args.key_hex);
 
-
-        
-        // CIPHER MODE (AES)
-        
-        bool needs_iv = (args.mode != "ecb");
-
-        // random dump
-        if (args.dump_random > 0) {
-            auto rnd = generate_random_bytes(args.dump_random);
-            write_file(args.output_file, rnd);
-            std::cout << "[INFO] Wrote random bytes.\n";
-            return 0;
-        }
+        /* ================= ENCRYPT ================= */
 
         if (args.encrypt) {
             auto plaintext = read_file(args.input_file);
 
-            std::vector<uint8_t> key;
-            if (args.key_hex.empty()) {
-                key = generate_random_bytes(16);
-            }
-            else {
-                key = hex_to_bytes(args.key_hex);
-                bool zero = true, seq = true;
-                for (int i = 0; i < 16; i++) {
-                    if (key[i] != 0) zero = false;
-                    if (i > 0 && key[i] != key[i - 1] + 1) seq = false;
-                }
-                if (zero)  std::cerr << "[WEAK-KEY-ZERO]\n";
-                if (seq)   std::cerr << "[WEAK-KEY-SEQ]\n";
+            /* ===== GCM ===== */
+            if (args.mode == "gcm") {
+                std::vector<uint8_t> aad;
+                if (!args.aad_hex.empty())
+                    aad = hex_to_bytes(args.aad_hex);
+
+                auto nonce = generate_random_bytes(12);
+                auto res = modes::gcm_encrypt(key, plaintext, aad, nonce);
+
+                std::vector<uint8_t> out;
+                out.insert(out.end(), res.nonce.begin(), res.nonce.end());
+                out.insert(out.end(), res.ciphertext.begin(), res.ciphertext.end());
+                out.insert(out.end(), res.tag.begin(), res.tag.end());
+
+                write_file(args.output_file, out);
+                std::cout << "[INFO] GCM encryption completed\n";
+                return 0;
             }
 
-            std::vector<uint8_t> iv(16);
-            if (needs_iv) {
-                if (!args.iv_hex.empty())
-                    iv = hex_to_bytes(args.iv_hex);
-                else
-                    iv = generate_random_bytes(16);
+            /* ===== Encrypt-then-MAC (CTR + HMAC-SHA256) ===== */
+            if (args.mode == "etm") {
+                std::vector<uint8_t> aad;
+                if (!args.aad_hex.empty())
+                    aad = hex_to_bytes(args.aad_hex);
+
+                /* --- key separation --- */
+                std::vector<uint8_t> k_enc = key;
+                std::vector<uint8_t> k_mac = key;
+                k_mac.push_back(0x01); // simple domain separation
+
+                auto iv = generate_random_bytes(16);
+                auto ciphertext = modes::encrypt_ctr(k_enc, plaintext, iv);
+
+                std::vector<uint8_t> mac_input = ciphertext;
+                mac_input.insert(mac_input.end(), aad.begin(), aad.end());
+
+                std::string mac_buf(
+                    reinterpret_cast<char*>(mac_input.data()),
+                    mac_input.size()
+                );
+                std::istringstream mac_stream(mac_buf);
+                auto tag = hmac_sha256(k_mac, mac_stream);
+
+                std::vector<uint8_t> out;
+                out.insert(out.end(), iv.begin(), iv.end());
+                out.insert(out.end(), ciphertext.begin(), ciphertext.end());
+                out.insert(out.end(), tag.begin(), tag.end());
+
+                write_file(args.output_file, out);
+                std::cout << "[INFO] Encrypt-then-MAC completed\n";
+                return 0;
             }
+
+            /* ===== OLD MODES ===== */
+            std::vector<uint8_t> iv(16);
+            if (needs_iv)
+                iv = generate_random_bytes(16);
 
             std::vector<uint8_t> cipher;
-            if (args.mode == "ecb") cipher = ecb_encrypt(key, plaintext);
+            if (args.mode == "ecb")      cipher = ecb_encrypt(key, plaintext);
             else if (args.mode == "cbc") cipher = modes::encrypt_cbc(key, plaintext, iv);
             else if (args.mode == "cfb") cipher = modes::encrypt_cfb(key, plaintext, iv);
             else if (args.mode == "ofb") cipher = modes::encrypt_ofb(key, plaintext, iv);
             else if (args.mode == "ctr") cipher = modes::encrypt_ctr(key, plaintext, iv);
 
-            if (needs_iv && args.iv_hex.empty())
+            if (needs_iv)
                 write_file_with_iv(args.output_file, iv, cipher);
             else
                 write_file(args.output_file, cipher);
 
-            std::cout << "[INFO] Encryption completed.\n";
             return 0;
         }
 
-        // decrypt
-        auto key = hex_to_bytes(args.key_hex);
-        std::vector<uint8_t> iv(16);
-        std::vector<uint8_t> enc;
 
-        if (needs_iv) {
-            if (args.iv_hex.empty())
-                enc = read_file_with_iv(args.input_file, iv);
-            else {
-                iv = hex_to_bytes(args.iv_hex);
-                enc = read_file(args.input_file);
+        /* ================= DECRYPT ================= */
+
+        /* ===== GCM ===== */
+        if (args.mode == "gcm") {
+            auto input = read_file(args.input_file);
+            if (input.size() < 12 + 16)
+                return 1;
+
+            std::vector<uint8_t> aad;
+            if (!args.aad_hex.empty())
+                aad = hex_to_bytes(args.aad_hex);
+
+            std::vector<uint8_t> nonce;
+
+            if (!args.iv_hex.empty()) {
+                nonce = hex_to_bytes(args.iv_hex);
+                if (nonce.size() != 12) {
+                    std::cerr << "[ERROR] GCM nonce must be 12 bytes\n";
+                    return 1;
+                }
             }
-        }
-        else {
-            enc = read_file(args.input_file);
+            else {
+                nonce.assign(input.begin(), input.begin() + 12);
+            }
+
+            std::vector<uint8_t> tag(input.end() - 16, input.end());
+            std::vector<uint8_t> cipher(input.begin() + 12, input.end() - 16);
+
+            std::vector<uint8_t> plaintext;
+            if (!modes::gcm_decrypt(key, nonce, cipher, aad, tag, plaintext)) {
+                std::cerr << "[ERROR] Authentication failed\n";
+                return 1;
+            }
+
+            write_file(args.output_file, plaintext);
+            return 0;
         }
 
-        std::vector<uint8_t> out;
-        if (args.mode == "ecb") out = ecb_decrypt(key, enc);
-        else if (args.mode == "cbc") out = modes::decrypt_cbc(key, enc, iv);
-        else if (args.mode == "cfb") out = modes::decrypt_cfb(key, enc, iv);
-        else if (args.mode == "ofb") out = modes::decrypt_ofb(key, enc, iv);
-        else if (args.mode == "ctr") out = modes::decrypt_ctr(key, enc, iv);
+        /* ===== Encrypt-then-MAC ===== */
+        if (args.mode == "etm") {
+            auto input = read_file(args.input_file);
+            if (input.size() < 16 + 32)
+                return 1;
 
-        write_file(args.output_file, out);
-        std::cout << "[INFO] Decryption completed.\n";
-        return 0;
+            std::vector<uint8_t> aad;
+            if (!args.aad_hex.empty())
+                aad = hex_to_bytes(args.aad_hex);
+
+            /* --- key separation --- */
+            std::vector<uint8_t> k_enc = key;
+            std::vector<uint8_t> k_mac = key;
+            k_mac.push_back(0x01);
+
+            std::vector<uint8_t> iv(input.begin(), input.begin() + 16);
+            std::vector<uint8_t> tag(input.end() - 32, input.end());
+            std::vector<uint8_t> cipher(input.begin() + 16, input.end() - 32);
+
+            std::vector<uint8_t> mac_input = cipher;
+            mac_input.insert(mac_input.end(), aad.begin(), aad.end());
+
+            std::string mac_buf(
+                reinterpret_cast<char*>(mac_input.data()),
+                mac_input.size()
+            );
+            std::istringstream mac_stream(mac_buf);
+            auto expected = hmac_sha256(k_mac, mac_stream);
+
+            uint8_t diff = 0;
+            for (size_t i = 0; i < tag.size(); ++i)
+                diff |= tag[i] ^ expected[i];
+
+            if (diff != 0) {
+                std::cerr << "[ERROR] Authentication failed (ETM)\n";
+                return 1;
+            }
+
+            auto plaintext = modes::decrypt_ctr(k_enc, cipher, iv);
+            write_file(args.output_file, plaintext);
+            return 0;
+        }
+
     }
-    catch (const std::exception& e) {
-        std::cerr << "[ERROR] " << e.what() << "\n";
+    catch (...) {
+        std::cerr << "[ERROR] Fatal error\n";
         return 1;
     }
 }

@@ -9,18 +9,14 @@ CliArgs parse_args(int argc, char* argv[]) {
     CliArgs args;
     std::map<std::string, std::string> flags;
 
-    
     // Detect "dgst" command (hashing mode)
-    
     int index = 1;
     if (argc > 1 && std::string(argv[1]) == "dgst") {
         args.command = "dgst";
         index = 2;
     }
 
-    
     // Parse flags: --key value   or  --flag
-   
     for (int i = index; i < argc; i++) {
         std::string a = argv[i];
 
@@ -41,9 +37,8 @@ CliArgs parse_args(int argc, char* argv[]) {
         }
     }
 
-    
-    // HASH MODE (dgst)
-    
+    /* ================= HASH MODE ================= */
+
     if (args.command == "dgst") {
         if (!flags.count("algorithm")) {
             std::cerr << "[ERROR] dgst requires --algorithm\n";
@@ -63,7 +58,7 @@ CliArgs parse_args(int argc, char* argv[]) {
             std::cerr << "[ERROR] dgst requires --input\n";
             exit(1);
         }
-        // HMAC mode
+
         if (flags.count("hmac")) {
             args.hmac = true;
 
@@ -74,11 +69,9 @@ CliArgs parse_args(int argc, char* argv[]) {
 
             args.key_hex = flags["key"];
 
-            if (flags.count("verify")) {
+            if (flags.count("verify"))
                 args.verify_file = flags["verify"];
-            }
 
-            // ќграничим алгоритм
             if (args.algorithm != "sha256") {
                 std::cerr << "[ERROR] HMAC supported only with sha256\n";
                 exit(1);
@@ -87,14 +80,11 @@ CliArgs parse_args(int argc, char* argv[]) {
 
         args.input_file = flags["input"];
         args.output_file = flags.count("output") ? flags["output"] : "hash.bin";
-
-        // NOTHING ELSE REQUIRED Ч EXIT HERE
         return args;
     }
 
-    
-    // CIPHER MODE (AES)
-    
+    /* ================= CIPHER MODE ================= */
+
     if (!flags.count("algorithm")) {
         std::cerr << "[ERROR] Missing --algorithm\n";
         exit(1);
@@ -109,17 +99,17 @@ CliArgs parse_args(int argc, char* argv[]) {
         exit(1);
     }
 
-    //  mode 
     if (!flags.count("mode")) {
         std::cerr << "[ERROR] Missing --mode\n";
         exit(1);
     }
+
     args.mode = flags["mode"];
     std::transform(args.mode.begin(), args.mode.end(),
         args.mode.begin(), ::tolower);
 
     const std::set<std::string> valid_modes = {
-        "ecb", "cbc", "cfb", "ofb", "ctr"
+        "ecb", "cbc", "cfb", "ofb", "ctr", "gcm", "etm"
     };
 
     if (!valid_modes.count(args.mode)) {
@@ -127,7 +117,6 @@ CliArgs parse_args(int argc, char* argv[]) {
         exit(1);
     }
 
-    //  encrypt / decrypt 
     args.encrypt = flags.count("encrypt");
     args.decrypt = flags.count("decrypt");
 
@@ -136,25 +125,39 @@ CliArgs parse_args(int argc, char* argv[]) {
         exit(1);
     }
 
-    //  input 
     if (!flags.count("input")) {
         std::cerr << "[ERROR] --input required\n";
         exit(1);
     }
+
     args.input_file = flags["input"];
+    args.output_file = flags.count("output")
+        ? flags["output"]
+        : args.input_file + (args.encrypt ? ".enc" : ".dec");
 
-    //  output 
-    if (flags.count("output"))
-        args.output_file = flags["output"];
-    else
-        args.output_file = args.input_file + (args.encrypt ? ".enc" : ".dec");
-
-    //  key / iv / random 
     if (flags.count("key"))
         args.key_hex = flags["key"];
 
     if (flags.count("iv"))
         args.iv_hex = flags["iv"];
+
+    if (flags.count("aad"))
+        args.aad_hex = flags["aad"];
+
+    // ===== Encrypt-then-MAC =====
+    if (flags.count("aead")) {
+        if (flags["aead"] != "etm") {
+            std::cerr << "[ERROR] Unsupported AEAD mode\n";
+            exit(1);
+        }
+
+        if (args.mode != "ctr") {
+            std::cerr << "[ERROR] Encrypt-then-MAC supported only with CTR mode\n";
+            exit(1);
+        }
+
+        args.etm = true;
+    }
 
     if (flags.count("dump-random"))
         args.dump_random = std::stoul(flags["dump-random"]);

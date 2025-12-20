@@ -424,3 +424,199 @@ tamper detection (изменение файла)
 тесты пустых и больших файлов
 
 Все тесты завершаются успешным прохождением.
+
+Sprint 6 — Аутентифицированное шифрование (AEAD)
+Общее описание
+
+В шестом спринте проект CryptoCore был расширен поддержкой
+аутентифицированного шифрования (AEAD) — то есть одновременного обеспечения:
+
+конфиденциальности (шифрование),
+
+целостности и подлинности данных (аутентификация).
+
+Реализованы два подхода:
+
+AES-GCM — стандартный режим AEAD (NIST SP 800-38D)
+
+Encrypt-then-MAC (EtM) — композиция AES-CTR + HMAC-SHA256
+
+Ключевое свойство:
+➡ при любой ошибке аутентификации расшифрование не выполняется вообще
+(катастрофический отказ).
+
+Поддерживаемые режимы AEAD
+1. AES-GCM (Galois/Counter Mode)
+
+Шифрование: AES в режиме CTR
+
+Аутентификация: GHASH по полю GF(2¹²⁸)
+
+Длина тега: 16 байт (128 бит)
+
+Nonce: 12 байт (рекомендовано NIST)
+
+Формат выходного файла:
+
+Nonce (12 байт) || Ciphertext || Tag (16 байт)
+
+2. Encrypt-then-MAC (AES-CTR + HMAC-SHA256)
+
+Шифрование: AES-CTR
+
+Аутентификация: HMAC-SHA256
+
+MAC считается по: Ciphertext || AAD
+
+Используется разделение ключей:
+
+K_enc — для шифрования
+
+K_mac — для MAC
+
+Формат выходного файла:
+
+IV (16 байт) || Ciphertext || HMAC Tag (32 байта)
+
+Associated Authenticated Data (AAD)
+
+AAD (ассоциированные данные) — это данные, которые:
+
+не шифруются,
+
+но участвуют в аутентификации.
+
+Примеры:
+
+заголовки,
+
+метаданные,
+
+служебная информация,
+
+контекст протокола.
+
+Если AAD при расшифровании отличается от исходного —
+➡ аутентификация проваливается, plaintext не выдаётся.
+
+AAD передаётся через CLI в виде hex-строки.
+
+Использование CLI
+AES-GCM: шифрование с AAD
+cryptocore --algorithm aes --mode gcm --encrypt \
+--key 00112233445566778899aabbccddeeff \
+--input plain.txt \
+--output gcm.bin \
+--aad aabbccddeeff
+
+AES-GCM: расшифрование с корректным AAD
+cryptocore --algorithm aes --mode gcm --decrypt \
+--key 00112233445566778899aabbccddeeff \
+--input gcm.bin \
+--output decrypted.txt \
+--aad aabbccddeeff
+
+
+Результат:
+
+[SUCCESS] GCM decryption completed
+
+AES-GCM: неверный AAD
+cryptocore --algorithm aes --mode gcm --decrypt \
+--key 00112233445566778899aabbccddeeff \
+--input gcm.bin \
+--output fail.txt \
+--aad deadbeef
+
+
+Результат:
+
+[ERROR] Authentication failed
+
+
+выходной файл не создаётся
+
+код завершения ≠ 0
+
+Encrypt-then-MAC: пример
+Шифрование
+cryptocore --algorithm aes --mode etm --encrypt \
+--key 00112233445566778899aabbccddeeff \
+--input plain.txt \
+--output etm.bin \
+--aad aabbcc
+
+Расшифрование
+cryptocore --algorithm aes --mode etm --decrypt \
+--key 00112233445566778899aabbccddeeff \
+--input etm.bin \
+--output etm_dec.txt \
+--aad aabbcc
+
+Свойства безопасности
+Катастрофический отказ
+
+Для GCM и Encrypt-then-MAC:
+
+если тег не совпадает:
+
+plaintext не выводится
+
+файл результата не создаётся
+
+программа немедленно завершает работу
+
+Это защищает от:
+
+подмены данных,
+
+bit-flipping атак,
+
+атак на целостность.
+
+Nonce в GCM
+
+Для каждого шифрования генерируется случайный nonce
+
+Повтор nonce с тем же ключом — критическая уязвимость
+
+Используется размер 12 байт (рекомендация NIST)
+
+Реализация
+
+GCM реализован с нуля
+
+GHASH в поле GF(2¹²⁸)
+
+Неприводимый многочлен:
+
+x¹²⁸ + x⁷ + x² + x + 1
+
+
+Сравнение тегов — в константное время
+
+Поддержка:
+
+произвольной длины plaintext
+
+произвольной длины AAD
+
+Тестирование (Sprint 6)
+
+Проведены тесты:
+
+корректность шифрование → расшифрование
+
+подмена AAD
+
+подмена ciphertext
+
+повторное шифрование (разные nonce)
+
+пустой AAD
+
+большой AAD
+
+Encrypt-then-MAC (все сценарии отказа)
+
+Все требования Sprint 6 выполнены.
