@@ -41,11 +41,18 @@ CliArgs parse_args(int argc, char* argv[]) {
 
     if (args.command == "dgst") {
         if (!flags.count("algorithm")) {
-            std::cerr << "[ERROR] dgst requires --algorithm\n";
-            exit(1);
+            if (flags.count("hmac")) {
+                args.algorithm = "sha256";
+            }
+            else {
+                std::cerr << "[ERROR] dgst requires --algorithm\n";
+                exit(1);
+            }
+        }
+        else {
+            args.algorithm = flags["algorithm"];
         }
 
-        args.algorithm = flags["algorithm"];
         std::transform(args.algorithm.begin(), args.algorithm.end(),
             args.algorithm.begin(), ::tolower);
 
@@ -82,6 +89,7 @@ CliArgs parse_args(int argc, char* argv[]) {
         args.output_file = flags.count("output") ? flags["output"] : "hash.bin";
         return args;
     }
+
 
     /* ================= CIPHER MODE ================= */
 

@@ -64,30 +64,44 @@ int main(int argc, char* argv[]) {
 
                 std::ostringstream oss;
                 oss << std::hex << std::setfill('0');
-                for (auto b : tag) oss << std::setw(2) << (int)b;
+                for (auto b : tag)
+                    oss << std::setw(2) << (int)b;
                 std::string hex = oss.str();
 
                 if (!args.verify_file.empty()) {
                     std::ifstream vf(args.verify_file);
                     std::string expected;
                     vf >> expected;
+
                     if (expected == hex) {
                         std::cout << "[OK] HMAC verification successful\n";
                         return 0;
                     }
+
                     std::cerr << "[ERROR] HMAC verification failed\n";
                     return 1;
                 }
 
-                std::cout << hex << "\n";
+                if (!args.output_file.empty()) {
+                    std::ofstream out(args.output_file, std::ios::binary);
+                    if (!out) {
+                        std::cerr << "[ERROR] Cannot write output file\n";
+                        return 1;
+                    }
+                    out << hex;
+                    std::cout << "[OK] HMAC computed successfully\n";
+                }
+                else {
+                    std::cout << hex << "\n";
+                }
                 return 0;
+
             }
         }
 
         /* ================= CIPHER MODE ================= */
 
         bool needs_iv = (args.mode != "ecb" && args.mode != "gcm" && args.mode != "etm");
-
         auto key = hex_to_bytes(args.key_hex);
 
         /* ================= ENCRYPT ================= */
@@ -110,20 +124,19 @@ int main(int argc, char* argv[]) {
                 out.insert(out.end(), res.tag.begin(), res.tag.end());
 
                 write_file(args.output_file, out);
-                std::cout << "[INFO] GCM encryption completed\n";
+                std::cout << "[OK] AES-GCM encryption successful\n";
                 return 0;
             }
 
-            /* ===== Encrypt-then-MAC (CTR + HMAC-SHA256) ===== */
+            /* ===== Encrypt-then-MAC ===== */
             if (args.mode == "etm") {
                 std::vector<uint8_t> aad;
                 if (!args.aad_hex.empty())
                     aad = hex_to_bytes(args.aad_hex);
 
-                /* --- key separation --- */
                 std::vector<uint8_t> k_enc = key;
                 std::vector<uint8_t> k_mac = key;
-                k_mac.push_back(0x01); // simple domain separation
+                k_mac.push_back(0x01);
 
                 auto iv = generate_random_bytes(16);
                 auto ciphertext = modes::encrypt_ctr(k_enc, plaintext, iv);
@@ -144,7 +157,7 @@ int main(int argc, char* argv[]) {
                 out.insert(out.end(), tag.begin(), tag.end());
 
                 write_file(args.output_file, out);
-                std::cout << "[INFO] Encrypt-then-MAC completed\n";
+                std::cout << "[OK] Encrypt-then-MAC encryption successful\n";
                 return 0;
             }
 
@@ -165,9 +178,9 @@ int main(int argc, char* argv[]) {
             else
                 write_file(args.output_file, cipher);
 
+            std::cout << "[OK] AES-" << args.mode << " encryption successful\n";
             return 0;
         }
-
 
         /* ================= DECRYPT ================= */
 
@@ -182,7 +195,6 @@ int main(int argc, char* argv[]) {
                 aad = hex_to_bytes(args.aad_hex);
 
             std::vector<uint8_t> nonce;
-
             if (!args.iv_hex.empty()) {
                 nonce = hex_to_bytes(args.iv_hex);
                 if (nonce.size() != 12) {
@@ -199,11 +211,12 @@ int main(int argc, char* argv[]) {
 
             std::vector<uint8_t> plaintext;
             if (!modes::gcm_decrypt(key, nonce, cipher, aad, tag, plaintext)) {
-                std::cerr << "[ERROR] Authentication failed\n";
+                std::cerr << "[ERROR] Authentication failed (GCM)\n";
                 return 1;
             }
 
             write_file(args.output_file, plaintext);
+            std::cout << "[OK] AES-GCM authentication successful\n";
             return 0;
         }
 
@@ -217,7 +230,6 @@ int main(int argc, char* argv[]) {
             if (!args.aad_hex.empty())
                 aad = hex_to_bytes(args.aad_hex);
 
-            /* --- key separation --- */
             std::vector<uint8_t> k_enc = key;
             std::vector<uint8_t> k_mac = key;
             k_mac.push_back(0x01);
@@ -247,12 +259,39 @@ int main(int argc, char* argv[]) {
 
             auto plaintext = modes::decrypt_ctr(k_enc, cipher, iv);
             write_file(args.output_file, plaintext);
+            std::cout << "[OK] Encrypt-then-MAC authentication successful\n";
             return 0;
         }
 
+        /* ===== OLD MODES DECRYPT ===== */
+
+        std::vector<uint8_t> iv;
+        std::vector<uint8_t> cipher;
+
+        if (needs_iv)
+            cipher = read_file_with_iv(args.input_file, iv);
+        else
+            cipher = read_file(args.input_file);
+
+        std::vector<uint8_t> plaintext;
+
+        if (args.mode == "ecb")      plaintext = ecb_decrypt(key, cipher);
+        else if (args.mode == "cbc") plaintext = modes::decrypt_cbc(key, cipher, iv);
+        else if (args.mode == "cfb") plaintext = modes::decrypt_cfb(key, cipher, iv);
+        else if (args.mode == "ofb") plaintext = modes::decrypt_ofb(key, cipher, iv);
+        else if (args.mode == "ctr") plaintext = modes::decrypt_ctr(key, cipher, iv);
+        else {
+            std::cerr << "[ERROR] Unknown mode\n";
+            return 1;
+        }
+
+        write_file(args.output_file, plaintext);
+        std::cout << "[OK] AES-" << args.mode << " decryption successful\n";
+        return 0;
     }
     catch (...) {
         std::cerr << "[ERROR] Fatal error\n";
         return 1;
     }
 }
+
