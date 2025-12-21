@@ -46,7 +46,6 @@ target_include_directories(cryptocore PRIVATE
 )
 
 target_link_libraries(cryptocore PRIVATE
-    OpenSSL::SSL
     OpenSSL::Crypto
 )
 
