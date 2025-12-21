@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <istream>
 
-#include "C:\Users\User\source\repos\CryptoCore\CryptoCore\src\hash\sha256_stream.h"
+#include "sha256_stream.h"
 
 struct HMAC_CTX {
     SHA256_CTX inner;

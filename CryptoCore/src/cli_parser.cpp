@@ -9,12 +9,20 @@ CliArgs parse_args(int argc, char* argv[]) {
     CliArgs args;
     std::map<std::string, std::string> flags;
 
-    // Detect "dgst" command (hashing mode)
     int index = 1;
-    if (argc > 1 && std::string(argv[1]) == "dgst") {
-        args.command = "dgst";
-        index = 2;
+    if (argc > 1) {
+        std::string cmd = argv[1];
+        if (cmd == "dgst") {
+            args.command = "dgst";
+            index = 2;
+        }
+        else if (cmd == "derive") {
+            args.command = "derive";
+            args.derive = true;
+            index = 2;
+        }
     }
+
 
     // Parse flags: --key value   or  --flag
     for (int i = index; i < argc; i++) {
@@ -90,6 +98,44 @@ CliArgs parse_args(int argc, char* argv[]) {
         return args;
     }
 
+    /* ================= DERIVE MODE (KDF) ================= */
+
+    if (args.command == "derive") {
+        // algorithm (пока только pbkdf2)
+        args.algorithm = flags.count("algorithm") ? flags["algorithm"] : "pbkdf2";
+        std::transform(args.algorithm.begin(), args.algorithm.end(),
+            args.algorithm.begin(), ::tolower);
+
+        if (args.algorithm != "pbkdf2") {
+            std::cerr << "[ERROR] Supported KDF algorithms: pbkdf2\n";
+            exit(1);
+        }
+
+        // password (MUST)
+        if (!flags.count("password")) {
+            std::cerr << "[ERROR] derive requires --password\n";
+            exit(1);
+        }
+        args.password = flags["password"];
+
+        // salt (optional hex)
+        if (flags.count("salt"))
+            args.salt_hex = flags["salt"];
+
+        // iterations (optional)
+        if (flags.count("iterations"))
+            args.iterations = static_cast<uint32_t>(std::stoul(flags["iterations"]));
+
+        // length (optional)
+        if (flags.count("length"))
+            args.length = static_cast<size_t>(std::stoul(flags["length"]));
+
+        // output (optional) Ч raw bytes
+        if (flags.count("output"))
+            args.derive_output_file = flags["output"];
+
+        return args;
+    }
 
     /* ================= CIPHER MODE ================= */
 

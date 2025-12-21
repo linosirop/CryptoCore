@@ -13,6 +13,7 @@
 #include "sha256_stream.h"
 #include "sha3_stream.h"
 #include "hmac.h"
+#include "kdf/pbkdf2.h"
 
 #include <iostream>
 #include <iomanip>
@@ -51,6 +52,63 @@ static std::vector<uint8_t> hex_to_bytes(const std::string& hex) {
 int main(int argc, char* argv[]) {
     try {
         CliArgs args = parse_args(argc, argv);
+        /* ================= DERIVE MODE (PBKDF2) ================= */
+
+        if (args.command == "derive") {
+            // password -> bytes (utf-8 как есть)
+            std::vector<uint8_t> password_bytes(args.password.begin(), args.password.end());
+
+            // salt bytes: либо из hex, либо random 16 bytes
+            std::vector<uint8_t> salt_bytes;
+            if (!args.salt_hex.empty()) {
+                salt_bytes = hex_to_bytes(args.salt_hex);
+            }
+            else {
+                salt_bytes = generate_random_bytes(16);
+            }
+
+            if (args.iterations == 0) {
+                std::cerr << "[ERROR] iterations must be > 0\n";
+                return 1;
+            }
+            if (args.length == 0) {
+                std::cerr << "[ERROR] length must be > 0\n";
+                return 1;
+            }
+
+            auto dk = pbkdf2_hmac_sha256(password_bytes, salt_bytes, args.iterations, args.length);
+
+            // print KEY_HEX SALT_HEX
+            auto to_hex = [](const std::vector<uint8_t>& v) {
+                std::ostringstream oss;
+                oss << std::hex << std::setfill('0');
+                for (auto b : v) oss << std::setw(2) << (int)b;
+                return oss.str();
+                };
+
+            std::string dk_hex = to_hex(dk);
+            std::string salt_hex = to_hex(salt_bytes);
+
+            std::cout << dk_hex << " " << salt_hex << "\n";
+            std::cout << "[OK] PBKDF2 key derived successfully\n";
+
+            // optional raw output
+            if (!args.derive_output_file.empty()) {
+                std::ofstream out(args.derive_output_file, std::ios::binary);
+                if (!out) {
+                    std::cerr << "[ERROR] Cannot open output file: " << args.derive_output_file << "\n";
+                    return 1;
+                }
+                out.write(reinterpret_cast<const char*>(dk.data()), static_cast<std::streamsize>(dk.size()));
+                out.close();
+                std::cout << "[OK] Derived key written to file (raw bytes)\n";
+            }
+
+            // (опционально) чистим пароль из памяти
+            std::fill(password_bytes.begin(), password_bytes.end(), 0);
+
+            return 0;
+        }
 
         /* ================= DIGEST MODE ================= */
 

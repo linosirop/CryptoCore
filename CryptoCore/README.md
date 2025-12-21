@@ -620,3 +620,18 @@ x¹²⁸ + x⁷ + x² + x + 1
 Encrypt-then-MAC (все сценарии отказа)
 
 Все требования Sprint 6 выполнены.
+## Sprint 7 — Key Derivation Functions (PBKDF2 + Key Hierarchy)
+
+### Goal
+Добавлены функции безопасного получения ключей:
+- **PBKDF2-HMAC-SHA256** — получение ключа из пароля (key stretching + salt + iterations)
+- **Key hierarchy (HMAC-based derive_key)** — детерминированное получение нескольких независимых ключей из master key по разным `context`
+
+---
+
+## Команда `derive` (PBKDF2)
+
+### Синтаксис
+```bash
+cryptocore derive --password "PASSWORD" [--salt SALT_HEX] [--iterations COUNT] [--length BYTES] [--algorithm pbkdf2] [--output FILE]
+
