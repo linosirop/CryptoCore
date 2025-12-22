@@ -1,0 +1,82 @@
+cd /d C:\Users\User\source\repos\CryptoCore\CryptoCore\out\build\x64-Debug
+del /q *.txt *.bin *.key 2>nul
+
+echo HelloCrypto>plain.txt
+
+REM ===== Sprint 2-4: AES modes round-trip =====
+cryptocore --algorithm aes --mode ecb --encrypt --key 00112233445566778899aabbccddeeff --input plain.txt --output ecb.bin
+cryptocore --algorithm aes --mode ecb --decrypt --key 00112233445566778899aabbccddeeff --input ecb.bin --output ecb.txt
+type ecb.txt
+
+cryptocore --algorithm aes --mode cbc --encrypt --key 00112233445566778899aabbccddeeff --input plain.txt --output cbc.bin
+cryptocore --algorithm aes --mode cbc --decrypt --key 00112233445566778899aabbccddeeff --input cbc.bin --output cbc.txt
+type cbc.txt
+
+cryptocore --algorithm aes --mode cfb --encrypt --key 00112233445566778899aabbccddeeff --input plain.txt --output cfb.bin
+cryptocore --algorithm aes --mode cfb --decrypt --key 00112233445566778899aabbccddeeff --input cfb.bin --output cfb.txt
+type cfb.txt
+
+cryptocore --algorithm aes --mode ofb --encrypt --key 00112233445566778899aabbccddeeff --input plain.txt --output ofb.bin
+cryptocore --algorithm aes --mode ofb --decrypt --key 00112233445566778899aabbccddeeff --input ofb.bin --output ofb.txt
+type ofb.txt
+
+cryptocore --algorithm aes --mode ctr --encrypt --key 00112233445566778899aabbccddeeff --input plain.txt --output ctr.bin
+cryptocore --algorithm aes --mode ctr --decrypt --key 00112233445566778899aabbccddeeff --input ctr.bin --output ctr.txt
+type ctr.txt
+
+REM ===== CTR manual IV =====
+echo CTR-IV-test>ctr_plain.txt
+cryptocore --algorithm aes --mode ctr --encrypt --key 00112233445566778899aabbccddeeff --iv 000102030405060708090a0b0c0d0e0f --input ctr_plain.txt --output ctr_iv.bin
+cryptocore --algorithm aes --mode ctr --decrypt --key 00112233445566778899aabbccddeeff --iv 000102030405060708090a0b0c0d0e0f --input ctr_iv.bin --output ctr_iv.txt
+type ctr_iv.txt
+
+REM ===== Sprint 5: dgst known-answer ("abc" no newline) + OpenSSL cross-check =====
+echo|set /p=abc>abc.txt
+cryptocore dgst --algorithm sha256 --input abc.txt
+cryptocore dgst --algorithm sha3-256 --input abc.txt
+openssl dgst -sha256 abc.txt
+openssl dgst -sha3-256 abc.txt
+
+REM ===== Sprint 5: HMAC compute + verify + tamper =====
+echo HMAC-test>hmac_plain.txt
+cryptocore dgst --hmac --key 00112233445566778899aabbccddeeff --input hmac_plain.txt --output hmac.txt
+cryptocore dgst --hmac --key 00112233445566778899aabbccddeeff --input hmac_plain.txt --verify hmac.txt
+echo X>>hmac_plain.txt
+cryptocore dgst --hmac --key 00112233445566778899aabbccddeeff --input hmac_plain.txt --verify hmac.txt
+
+REM ===== Sprint 6: GCM AAD ok / wrong AAD / tamper (no output file) =====
+echo HelloGCM>gcm_plain.txt
+cryptocore --algorithm aes --mode gcm --encrypt --key 00112233445566778899aabbccddeeff --input gcm_plain.txt --output gcm.bin --aad aabbccddeeff
+cryptocore --algorithm aes --mode gcm --decrypt --key 00112233445566778899aabbccddeeff --input gcm.bin --output gcm_out.txt --aad aabbccddeeff
+type gcm_out.txt
+cryptocore --algorithm aes --mode gcm --decrypt --key 00112233445566778899aabbccddeeff --input gcm.bin --output fail_gcm.txt --aad deadbeef
+dir fail_gcm.txt
+copy /y gcm.bin gcm_bad.bin
+echo X>>gcm_bad.bin
+cryptocore --algorithm aes --mode gcm --decrypt --key 00112233445566778899aabbccddeeff --input gcm_bad.bin --output fail_tamper.txt --aad aabbccddeeff
+dir fail_tamper.txt
+
+REM ===== Sprint 6: Nonce uniqueness quick check =====
+cryptocore --algorithm aes --mode gcm --encrypt --key 00112233445566778899aabbccddeeff --input gcm_plain.txt --output n1.bin
+cryptocore --algorithm aes --mode gcm --encrypt --key 00112233445566778899aabbccddeeff --input gcm_plain.txt --output n2.bin
+fc /b n1.bin n2.bin
+
+REM ===== Sprint 6: ETM ok + tamper (no output file) =====
+echo HelloETM>etm_plain.txt
+cryptocore --algorithm aes --mode etm --encrypt --key 00112233445566778899aabbccddeeff --input etm_plain.txt --output etm.bin
+cryptocore --algorithm aes --mode etm --decrypt --key 00112233445566778899aabbccddeeff --input etm.bin --output etm_out.txt
+type etm_out.txt
+copy /y etm.bin etm_bad.bin
+echo X>>etm_bad.bin
+cryptocore --algorithm aes --mode etm --decrypt --key 00112233445566778899aabbccddeeff --input etm_bad.bin --output etm_fail.txt
+dir etm_fail.txt
+
+REM ===== Sprint 7: unit tests + vectors + OpenSSL PBKDF2 match =====
+test_pbkdf2.exe
+test_hkdf.exe
+cryptocore derive --password "password" --salt 73616c74 --iterations 1 --length 20
+cryptocore derive --password "password" --salt 73616c74 --iterations 2 --length 20
+cryptocore derive --password "test" --salt 1234567890abcdef --iterations 1000 --length 32
+openssl kdf -keylen 32 -kdfopt pass:test -kdfopt hexsalt:1234567890abcdef -kdfopt iter:1000 -kdfopt digest:SHA256 PBKDF2
+cryptocore derive --password "test" --salt 1234567890abcdef --iterations 1000 --length 32 --output derived.key
+dir derived.key

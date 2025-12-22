@@ -1,5 +1,5 @@
 ﻿#include "hkdf.h"
-#include "../mac/hmac.h"
+#include "hmac.h"
 
 #include <vector>
 #include <string>

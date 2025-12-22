@@ -1,3 +1,0 @@
-Хэш SHA256 abc.txt:
-552bab6864c7a7b69a502ed1854b9245c0e1a30f008aaa0b281da62585fdb025
-CertUtil: -hashfile — команда успешно выполнена.

@@ -113,29 +113,42 @@ int main(int argc, char* argv[]) {
         /* ================= DIGEST MODE ================= */
 
         if (args.command == "dgst") {
-            if (args.hmac) {
-                auto key = hex_to_bytes(args.key_hex);
-                std::ifstream in(args.input_file, std::ios::binary);
-                if (!in) return 1;
+            // input is required
+            std::ifstream in(args.input_file, std::ios::binary);
+            if (!in) {
+                std::cerr << "[ERROR] Cannot open input file: " << args.input_file << "\n";
+                return 1;
+            }
 
-                auto tag = hmac_sha256(key, in);
-
+            auto bytes_to_hex = [](const std::vector<uint8_t>& v) {
                 std::ostringstream oss;
                 oss << std::hex << std::setfill('0');
-                for (auto b : tag)
-                    oss << std::setw(2) << (int)b;
-                std::string hex = oss.str();
+                for (uint8_t b : v) oss << std::setw(2) << (int)b;
+                return oss.str();
+                };
+
+            // ---- HMAC ----
+            if (args.hmac) {
+                auto key = hex_to_bytes(args.key_hex);
+                auto tag = hmac_sha256(key, in);
+                std::string hex = bytes_to_hex(tag);
 
                 if (!args.verify_file.empty()) {
                     std::ifstream vf(args.verify_file);
+                    if (!vf) {
+                        std::cerr << "[ERROR] Cannot open verify file: " << args.verify_file << "\n";
+                        return 1;
+                    }
                     std::string expected;
                     vf >> expected;
+
+                    // на всякий случай нормализуем (без пробелов/переводов строк)
+                    expected.erase(std::remove_if(expected.begin(), expected.end(), ::isspace), expected.end());
 
                     if (expected == hex) {
                         std::cout << "[OK] HMAC verification successful\n";
                         return 0;
                     }
-
                     std::cerr << "[ERROR] HMAC verification failed\n";
                     return 1;
                 }
@@ -143,19 +156,73 @@ int main(int argc, char* argv[]) {
                 if (!args.output_file.empty()) {
                     std::ofstream out(args.output_file, std::ios::binary);
                     if (!out) {
-                        std::cerr << "[ERROR] Cannot write output file\n";
+                        std::cerr << "[ERROR] Cannot write output file: " << args.output_file << "\n";
                         return 1;
                     }
                     out << hex;
-                    std::cout << "[OK] HMAC computed successfully\n";
-                }
-                else {
                     std::cout << hex << "\n";
+                    std::cout << "[OK] HMAC computed successfully\n";
+                    return 0;
                 }
-                return 0;
 
+                std::cout << hex << "\n";
+                std::cout << "[OK] HMAC computed successfully\n";
+                return 0;
             }
+
+            // ---- DIGEST (sha256 / sha3-256) ----
+            std::vector<uint8_t> digest;
+
+            if (args.algorithm == "sha256") {
+                SHA256_CTX ctx;
+                sha256_init(ctx);
+
+                std::vector<uint8_t> buf(4096);
+                while (in) {
+                    in.read(reinterpret_cast<char*>(buf.data()), (std::streamsize)buf.size());
+                    std::streamsize got = in.gcount();
+                    if (got > 0)
+                        sha256_update(ctx, buf.data(), (size_t)got);
+                }
+
+                digest = sha256_final(ctx);
+            }
+            else if (args.algorithm == "sha3-256") {
+                SHA3_CTX ctx;
+                sha3_256_init(ctx);
+
+                std::vector<uint8_t> buf(4096);
+                while (in) {
+                    in.read(reinterpret_cast<char*>(buf.data()), (std::streamsize)buf.size());
+                    std::streamsize got = in.gcount();
+                    if (got > 0)
+                        sha3_256_update(ctx, buf.data(), (size_t)got);
+                }
+
+                digest = sha3_256_final(ctx);
+            }
+            else {
+                std::cerr << "[ERROR] Supported hash algorithms: sha256, sha3-256\n";
+                return 1;
+            }
+
+            std::string hex = bytes_to_hex(digest);
+
+            if (!args.output_file.empty()) {
+                std::ofstream out(args.output_file, std::ios::binary);
+                if (!out) {
+                    std::cerr << "[ERROR] Cannot write output file: " << args.output_file << "\n";
+                    return 1;
+                }
+                out << hex;
+            }
+
+            std::cout << hex << "\n";
+            std::cout << "[OK] Digest computed successfully\n";
+            return 0;
         }
+
+
 
         /* ================= CIPHER MODE ================= */
 
