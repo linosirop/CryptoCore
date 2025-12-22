@@ -189,8 +189,11 @@ CliArgs parse_args(int argc, char* argv[]) {
         ? flags["output"]
         : args.input_file + (args.encrypt ? ".enc" : ".dec");
 
-    if (flags.count("key"))
-        args.key_hex = flags["key"];
+    if (!flags.count("key")) {
+        std::cerr << "[ERROR] --key required\n";
+        exit(1);
+    }
+    args.key_hex = flags["key"];
 
     if (flags.count("iv"))
         args.iv_hex = flags["iv"];

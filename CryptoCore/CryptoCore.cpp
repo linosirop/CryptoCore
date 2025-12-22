@@ -20,7 +20,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
-
+#include <exception>
 static std::vector<uint8_t> hex_to_bytes(const std::string& hex) {
     if (hex.size() % 2 != 0) {
         std::cerr << "[ERROR] Hex string length must be even\n";
@@ -228,6 +228,10 @@ int main(int argc, char* argv[]) {
 
         bool needs_iv = (args.mode != "ecb" && args.mode != "gcm" && args.mode != "etm");
         auto key = hex_to_bytes(args.key_hex);
+        if (key.size() != 16) {
+            std::cerr << "[ERROR] Key must be exactly 16 bytes.\n";
+            return 1;
+        }
 
         /* ================= ENCRYPT ================= */
 
@@ -414,9 +418,10 @@ int main(int argc, char* argv[]) {
         std::cout << "[OK] AES-" << args.mode << " decryption successful\n";
         return 0;
     }
-    catch (...) {
-        std::cerr << "[ERROR] Fatal error\n";
+    catch (const std::exception& e) {
+        std::cerr << "[ERROR] " << e.what() << "\n";
         return 1;
     }
+
 }
 
