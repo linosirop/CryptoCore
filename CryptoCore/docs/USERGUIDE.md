@@ -28,7 +28,8 @@ sudo apt install -y cmake g++ libssl-dev
 
 From project root:
 
-git clone https://github.com/linosirop/CryptoCore
+git clone -b sprint-8 --single-branch https://github.com/linosirop/CryptoCore
+
 cd <ПАПКА_ПРОЕКТА>
 
 cmake -S . -B build
